@@ -1,89 +1,101 @@
 import { useState } from "react";
-import Modal from "../Components/Modal";
+import { AnimatePresence, motion } from "framer-motion";
+
+// Import bubble components
+import WeekBubble from "../Components/Bubbles/WeekBubble";
+import CalendarBubble from "../Components/Bubbles/CalendarBubble";
+import TasksBubble from "../Components/Bubbles/TasksBubble";
+import MessagesBubble from "../Components/Bubbles/MessagesBubble";
+import BubbleBubble from "../Components/Bubbles/BubblesBubbles";
+
+const moduleComponents = {
+  week: <WeekBubble />,
+  calendar: <CalendarBubble />,
+  tasks: <TasksBubble />,
+  messages: <MessagesBubble />,
+  bubble: <BubbleBubble />,
+};
 
 function Home() {
   const [activeModule, setActiveModule] = useState<string | null>(null);
 
   return (
     <>
-      <Modal isOpen={!!activeModule} onClose={() => setActiveModule(null)}>
+      {/* Animated Modal */}
+      <AnimatePresence>
+        {activeModule && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              layoutId={activeModule}
+              className="relative w-[90vw] h-[90vh] bg-white/10 backdrop-blur-lg rounded-3xl p-6 text-white shadow-2xl overflow-auto"
+            >
+              <button
+                onClick={() => setActiveModule(null)}
+                className="absolute top-4 right-6 text-white text-xl"
+              >
+                ✖
+              </button>
 
-        {activeModule === "week" && (
-          <div>
-            <h2 className="text-2xl mb-4">✅ Tasks</h2>
-            <p>[Tasks module placeholder]</p>
-          </div>
+              {/* Render selected component */}
+              {moduleComponents[activeModule]}
+            </motion.div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
-        {activeModule === "tasks" && (
-          <div>
-            <h2 className="text-2xl mb-4">✅ Tasks</h2>
-            <p>[Tasks module placeholder]</p>
-          </div>
-        )}
-
-        {activeModule === "calendar" && (
-          <div>
-            <h2 className="text-2xl mb-4">📅 Monthly Calendar</h2>
-            <div className="w-full h-full border border-white/30 rounded-xl p-4">
-              [Calendar Component Goes Here]
-            </div>
-          </div>
-        )}
-
-
-        {activeModule === "messages" && (
-          <div>
-            <h2 className="text-2xl mb-4">✅ Tasks</h2>
-            <p>[Tasks module placeholder]</p>
-          </div>
-        )}
-
-        {activeModule === "bubble" && (
-          <div>
-            <h2 className="text-2xl mb-4">✅ Tasks</h2>
-            <p>[Tasks module placeholder]</p>
-          </div>
-        )}
-
-      </Modal>
-
+      {/* Bubble Grid */}
       <div className="flex gap-4 w-screen h-screen p-16 text-white font-sans bg-[url('/space-bg.png')] bg-cover bg-center bg-no-repeat">
 
         {/* Left Side */}
         <div className="flex flex-col gap-4 w-[30%]">
-          <div
+          <motion.div
+            layoutId="week"
             onClick={() => setActiveModule("week")}
-            className="h-[40%] bg-white/5 backdrop-blur-lg rounded-3xl p-4 shadow-md cursor-pointer hover:bg-white/10 transition"
+            className="h-[40%] bg-white/5 backdrop-blur-lg rounded-3xl p-4 shadow-md cursor-pointer hover:bg-white/10"
           >
-            Monthly Calendar
-          </div>
-          <div
+            Weekly View
+          </motion.div>
+
+          <motion.div
+            layoutId="tasks"
             onClick={() => setActiveModule("tasks")}
-            className="h-[60%] bg-white/5 backdrop-blur-lg rounded-3xl p-4 shadow-md cursor-pointer hover:bg-white/10 transition"
+            className="h-[60%] bg-white/5 backdrop-blur-lg rounded-3xl p-4 shadow-md cursor-pointer hover:bg-white/10"
           >
             Task Manager
-          </div>
+          </motion.div>
         </div>
 
         {/* Right Side */}
         <div className="flex flex-col gap-4 w-[70%]">
-          <div 
-          onClick={() => setActiveModule("calendar")}
-          className="h-[70%] bg-white/5 backdrop-blur-lg rounded-3xl p-4 shadow-md cursor-pointer">
+          <motion.div
+            layoutId="calendar"
+            onClick={() => setActiveModule("calendar")}
+            className="h-[70%] bg-white/5 backdrop-blur-lg rounded-3xl p-4 shadow-md hover:bg-white/10 cursor-pointer"
+          >
             Big Panel
-          </div>
+          </motion.div>
+
           <div className="grid grid-cols-2 gap-4 h-[30%]">
-            <div 
-            onClick={() => setActiveModule("messages")}
-            className="bg-white/5 backdrop-blur-lg rounded-3xl p-4 shadow-md cursor-pointer">
+            <motion.div
+              layoutId="messages"
+              onClick={() => setActiveModule("messages")}
+              className="bg-white/5 backdrop-blur-lg rounded-3xl p-4 shadow-md hover:bg-white/10 cursor-pointer"
+            >
               Bottom Right Left
-            </div>
-            <div 
-            onClick={() => setActiveModule("bubble")}
-            className="bg-white/5 backdrop-blur-lg rounded-3xl p-4 shadow-md cursor-pointer">
+            </motion.div>
+
+            <motion.div
+              layoutId="bubble"
+              onClick={() => setActiveModule("bubble")}
+              className="bg-white/5 backdrop-blur-lg rounded-3xl p-4 shadow-md hover:bg-white/10 cursor-pointer"
+            >
               Bottom Right Right
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -92,13 +104,3 @@ function Home() {
 }
 
 export default Home;
-
-/** 
- * Add hover effects: glow on hover
-
-Add subtle gradient borders
-
-Add a space/star field background image
-
-Use Framer Motion for animated bubble entry
-*/
