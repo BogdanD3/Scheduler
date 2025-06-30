@@ -1,0 +1,283 @@
+import { useState } from "react";
+import clsx from "clsx";
+
+const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const workers = ["Alice", "Bob", "Charlie", "Diana", "Eve"];
+const shifts = ["Morning", "Afternoon", "Night", "Off"];
+
+// Helper to get a week start date and generate date strings, not core for monthly calendar logic here but can be expanded later.
+
+function MonthlyBubble() {
+  // State for preferences (shift choices for 4 workers only), schedule, and selected week (max 4 weeks shown)
+  const [preferences, setPreferences] = useState<{ [name: string]: string }>({});
+  const [schedule, setSchedule] = useState<any>(null);
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
+
+  // Show 4 weeks, for demo just label them Week 1 ... Week 4
+  const weeks = ["Week 1", "Week 2", "Week 3", "Week 4"];
+
+  // Helper to count how many people assigned to a shift on a given day for validation
+  function countShiftWorkers(sched: any, dayIndex: number, shift: string) {
+    let count = 0;
+    for (let w of workers) {
+      if (sched[w] && sched[w][dayIndex] === shift) count++;
+    }
+    return count;
+  }
+
+  // Generate schedule with constraints described
+  const generateSchedule = () => {
+    const nightWorker = workers[4]; // Eve
+    const result: any = {};
+
+    // Assign 2 random days off for nightWorker Eve
+    let nightDaysOff: number[] = [];
+    while (nightDaysOff.length < 2) {
+      const d = Math.floor(Math.random() * 7);
+      if (!nightDaysOff.includes(d)) nightDaysOff.push(d);
+    }
+    nightDaysOff.sort();
+
+    // Eve's schedule: night shift except her days off
+    result[nightWorker] = Array(7)
+      .fill("Night")
+      .map((_, i) => (nightDaysOff.includes(i) ? "Off" : "Night"));
+
+    // Decide a single shift (morning or afternoon) for the rest 4 workers for the whole week
+    // We'll assign each one a shift, but ensure max 2 per shift per day
+
+    // Try to keep the workers balanced and avoid overfilling shifts:
+    // We'll first pick shifts from preferences if set, else assign randomly but balanced
+
+    // Count how many workers assigned per shift
+    let morningCount = 0;
+    let afternoonCount = 0;
+
+    const assignedShifts: { [worker: string]: string } = {};
+
+    // First assign shifts for 4 workers based on preference or balance them
+    for (let i = 0; i < 4; i++) {
+      const worker = workers[i];
+      let pref = preferences[worker];
+
+      if (pref === "Night") pref = ""; // night not allowed except Eve
+
+      if (pref === "Morning" && morningCount < 2) {
+        assignedShifts[worker] = "Morning";
+        morningCount++;
+      } else if (pref === "Afternoon" && afternoonCount < 2) {
+        assignedShifts[worker] = "Afternoon";
+        afternoonCount++;
+      } else {
+        // Assign shift based on current counts
+        if (morningCount <= afternoonCount && morningCount < 2) {
+          assignedShifts[worker] = "Morning";
+          morningCount++;
+        } else if (afternoonCount < 2) {
+          assignedShifts[worker] = "Afternoon";
+          afternoonCount++;
+        } else {
+          // fallback, just assign morning or afternoon arbitrarily
+          assignedShifts[worker] = "Morning";
+          morningCount++;
+        }
+      }
+    }
+
+    // Now assign days off for each of the 4 workers - only 1 free day per day allowed total (including Eve's offs)
+    // So total 7 days, for each day max one free day.
+    // We need to distribute 4 free days (one for each worker) over 7 days, avoiding Eve's free days.
+
+    // We have Eve's free days indexes in nightDaysOff[]
+    // Days free map to check which days are already off:
+    const freeDaysTaken = new Set(nightDaysOff);
+
+    // Allocate 1 free day per worker, pick randomly from days not in freeDaysTaken
+    for (let worker of workers.slice(0, 4)) {
+      let freeDay = -1;
+      for (let tries = 0; tries < 20; tries++) {
+        const candidate = Math.floor(Math.random() * 7);
+        if (!freeDaysTaken.has(candidate)) {
+          freeDay = candidate;
+          break;
+        }
+      }
+      if (freeDay === -1) {
+        // fallback assign first available day
+        for (let d = 0; d < 7; d++) {
+          if (!freeDaysTaken.has(d)) {
+            freeDay = d;
+            break;
+          }
+        }
+      }
+      freeDaysTaken.add(freeDay);
+      // Now create the schedule array for the worker
+      const workerShift = assignedShifts[worker];
+      // All days workerShift except freeDay off
+      result[worker] = Array(7)
+        .fill(workerShift)
+        .map((shift, i) => (i === freeDay ? "Off" : shift));
+    }
+
+    // Adjust Eve's remaining 5 working days to fill shifts where only one worker is assigned per shift
+    // So if on a given day, morning or afternoon shift has only one person, Eve should fill that day with that shift instead of night
+
+    for (let day = 0; day < 7; day++) {
+      if (nightDaysOff.includes(day)) continue; // day off for Eve
+      // Count morning and afternoon workers on this day excluding Eve
+      let morningWorkers = 0;
+      let afternoonWorkers = 0;
+
+      for (let i = 0; i < 4; i++) {
+        const w = workers[i];
+        if (result[w][day] === "Morning") morningWorkers++;
+        else if (result[w][day] === "Afternoon") afternoonWorkers++;
+      }
+
+      // If morning or afternoon has only one worker, Eve fills that shift instead of night
+      if (morningWorkers === 1 && afternoonWorkers >= 2) {
+        result[nightWorker][day] = "Morning";
+      } else if (afternoonWorkers === 1 && morningWorkers >= 2) {
+        result[nightWorker][day] = "Afternoon";
+      } else {
+        // else Eve stays night
+        result[nightWorker][day] = "Night";
+      }
+    }
+
+    setSchedule(result);
+  };
+
+  // Reset state handlers
+  const regenerate = () => {
+    setSchedule(null);
+    setPreferences({});
+  };
+
+  // Save handler placeholder for future DB save logic
+  const saveSchedule = () => {
+    alert("Schedule saved! (Functionality to be implemented)");
+  };
+
+  const handlePreferenceChange = (worker: string, shift: string) => {
+    setPreferences((prev) => ({ ...prev, [worker]: shift }));
+  };
+
+  return (
+    <div className="text-white p-4">
+      <h2 className="text-2xl mb-4">📅 Monthly Schedule (4 weeks)</h2>
+
+      {/* Week selector */}
+      <div className="mb-4 flex gap-4">
+        {weeks.map((w, i) => (
+          <button
+            key={w}
+            className={clsx(
+              "px-4 py-2 rounded",
+              selectedWeekIndex === i ? "bg-blue-600" : "bg-white/10"
+            )}
+            onClick={() => {
+              setSelectedWeekIndex(i);
+              setSchedule(null);
+              setPreferences({});
+            }}
+          >
+            {w}
+          </button>
+        ))}
+      </div>
+
+      {/* Shift preferences for 4 workers only */}
+      {!schedule && (
+        <>
+          <p className="mb-2">Set preferred shifts for each worker (except Eve - night shift):</p>
+          {workers.slice(0, 4).map((worker) => (
+            <div key={worker} className="mb-2 flex items-center gap-2">
+              <label className="w-20">{worker}:</label>
+              <select
+                value={preferences[worker] || ""}
+                onChange={(e) => handlePreferenceChange(worker, e.target.value)}
+                className="bg-white/10 p-2 rounded text-black"
+              >
+                <option value="">Select shift</option>
+                <option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option>
+                <option value="Off">Off</option>
+                {/* Eve is night shift, not selectable here */}
+              </select>
+            </div>
+          ))}
+
+          <button
+            onClick={generateSchedule}
+            className="mt-4 bg-yellow-500 px-4 py-2 rounded hover:bg-yellow-600"
+          >
+            Generate Schedule
+          </button>
+        </>
+      )}
+
+      {/* Schedule Table */}
+      {schedule && (
+        <>
+          <div className="overflow-x-auto mt-6">
+            <table className="w-full border border-white/20">
+              <thead>
+                <tr>
+                  <th className="p-2 border border-white/20">Worker</th>
+                  {days.map((day) => (
+                    <th key={day} className="p-2 border border-white/20">
+                      {day}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {workers.map((worker) => (
+                  <tr key={worker}>
+                    <td className="p-2 border border-white/20 font-semibold">{worker}</td>
+                    {schedule[worker].map((shift: string, idx: number) => (
+                      <td
+                        key={`${worker}-${idx}`}
+                        className={clsx(
+                          "p-2 border border-white/20",
+                          shift === "Off" && "text-gray-400 italic",
+                          shift === "Night" && "text-purple-400",
+                          shift === "Morning" && "text-green-300",
+                          shift === "Afternoon" && "text-yellow-300"
+                        )}
+                      >
+                        {shift}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 flex gap-4">
+            <button
+              onClick={regenerate}
+              className="bg-yellow-500 px-4 py-2 rounded hover:bg-yellow-600"
+            >
+              🔄 Regenerate
+            </button>
+            <button
+              onClick={saveSchedule}
+              className="bg-green-500 px-4 py-2 rounded hover:bg-green-600"
+            >
+              ✅ Save
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default MonthlyBubble;
+  
+
+  OVO JE BOLJI IZGLED LOSIJA LOGIKA
