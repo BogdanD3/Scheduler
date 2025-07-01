@@ -3,14 +3,14 @@ import { AnimatePresence, motion } from "framer-motion";
 
 // Import bubble components
 import WeekBubble from "../Components/Bubbles/WeekBubble";
-import CalendarBubble from "../Components/Bubbles/CalendarBubble";
+import MonthlyBubble from "../Components/Bubbles/Calendar/MonthlyBubble";
 import TasksBubble from "../Components/Bubbles/TasksBubble";
 import MessagesBubble from "../Components/Bubbles/MessagesBubble";
 import BubbleBubble from "../Components/Bubbles/BubblesBubbles";
 
 const moduleComponents = {
   week: <WeekBubble />,
-  calendar: <CalendarBubble />,
+  calendar: <MonthlyBubble />,
   tasks: <TasksBubble />,
   messages: <MessagesBubble />,
   bubble: <BubbleBubble />,
