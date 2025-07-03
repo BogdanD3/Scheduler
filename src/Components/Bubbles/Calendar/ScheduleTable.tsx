@@ -1,22 +1,33 @@
 import clsx from "clsx";
 
-const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
 interface Props {
   workers: string[];
   schedule: any;
+  editingDay: string | null;
+  onEdit: (worker: string, dayIndex: number) => void;
+  onShiftChange: (worker: string, dayIndex: number, shift: string) => void;
+  dayLabels: string[]; // new prop for dates, length 7
+  selectedWeekIndex: number;
 }
 
-function ScheduleTable({ workers, schedule }: Props) {
+function ScheduleTable({
+  schedule,
+  workers,
+  editingDay,
+  onEdit,
+  onShiftChange,
+  dayLabels,
+  selectedWeekIndex
+}: Props) {
   return (
     <div className="overflow-x-auto mt-6">
       <table className="w-full border border-white/20">
         <thead>
           <tr>
             <th className="p-2 border border-white/20">Worker</th>
-            {days.map((day) => (
-              <th key={day} className="p-2 border border-white/20">
-                {day}
+            {dayLabels.map((date, idx) => (
+              <th key={idx} className="p-2 border border-white/20">
+                {date}
               </th>
             ))}
           </tr>
@@ -28,15 +39,33 @@ function ScheduleTable({ workers, schedule }: Props) {
               {schedule[worker].map((shift: string, idx: number) => (
                 <td
                   key={`${worker}-${idx}`}
-                  className={clsx(
-                    "p-2 border border-white/20",
-                    shift === "Off" && "text-gray-400 italic",
-                    shift === "Night" && "text-purple-400",
-                    shift === "Morning" && "text-green-300",
-                    shift === "Afternoon" && "text-yellow-300"
-                  )}
+                  className="p-2 border border-white/20 cursor-pointer hover:bg-white/10"
+                  onClick={() => onEdit(worker, idx)}
                 >
-                  {shift}
+                  {editingDay === `${worker}-${idx}` || editingDay === `${selectedWeekIndex}-${worker}-${idx}` ? (
+                    <select
+                      autoFocus
+                      className="bg-white/10 p-1 rounded"
+                      value={shift}
+                      onChange={(e) => onShiftChange(worker, idx, e.target.value)}
+                    >
+                      <option>Morning</option>
+                      <option>Afternoon</option>
+                      <option>Night</option>
+                      <option>Off</option>
+                    </select>
+                  ) : (
+                        <span
+                          className={clsx(
+                            shift === "Off" && "text-gray-400 italic",
+                            shift === "Night" && "text-purple-500",
+                            shift === "Morning" && "text-green-500",
+                            shift === "Afternoon" && "text-yellow-500"
+                          )}
+                        >
+                          {shift}
+                        </span>
+                  )}
                 </td>
               ))}
             </tr>

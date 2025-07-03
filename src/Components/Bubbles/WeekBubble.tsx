@@ -1,18 +1,9 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import clsx from "clsx";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const workers = ["Alice", "Bob", "Charlie", "Diana", "Eve"];
 const shifts = ["Morning", "Afternoon"];
-
-function getNextMonday(date = new Date()) {
-  const result = new Date(date);
-  const day = result.getDay();
-  const diff = (day === 0 ? 1 : 8) - day;
-  result.setDate(result.getDate() + diff);
-  return result;
-}
 
 function formatDate(date: Date) {
   return date.toISOString().slice(0, 10);
