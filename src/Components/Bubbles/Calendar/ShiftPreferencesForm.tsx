@@ -20,7 +20,8 @@ function ShiftPreferencesForm({ workers, preferences, onChange, onGenerate }: Pr
             <option value="">Select shift</option>
             <option value="Morning">Morning</option>
             <option value="Afternoon">Afternoon</option>
-            <option value="Off">Off</option>
+            <option value="Night">Night</option> 
+
           </select>
         </div>
       ))}
