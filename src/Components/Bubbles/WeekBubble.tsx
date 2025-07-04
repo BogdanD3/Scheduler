@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import ScheduleTable from "./Calendar/ScheduleTable";
-import ShiftRequestModal from "./Calendar/ShiftRequestModal";
-import AdminConfirmModal from "./Calendar/AdminConfirmModal";
+import ShiftRequestModal from "./Calendar/Modals/ShiftRequestModal";
+import AdminConfirmModal from "./Calendar/Modals/AdminConfirmModal";
 import RequestsList from "../RequestsList";
 
 

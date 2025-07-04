@@ -3,7 +3,7 @@ import WeekSelector from "./WeekSelector";
 import ShiftPreferencesForm from "./ShiftPreferencesForm";
 import ScheduleTable from "./ScheduleTable";
 import ActionButtons from "./ActionButtons";
-import ShiftRequestModal from "./ShiftRequestModal"; // your modal
+import ShiftRequestModal from "./Modals/ShiftRequestModal"; // your modal
 import { generateSchedule } from "./generateSchedule";
 
 const workers = ["Alice", "Bob", "Charlie", "Diana", "Eve"];
