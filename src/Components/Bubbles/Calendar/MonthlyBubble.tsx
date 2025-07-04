@@ -3,7 +3,8 @@ import WeekSelector from "./WeekSelector";
 import ShiftPreferencesForm from "./ShiftPreferencesForm";
 import ScheduleTable from "./ScheduleTable";
 import ActionButtons from "./ActionButtons";
-import ShiftRequestModal from "./Modals/ShiftRequestModal"; // your modal
+import ShiftRequestModal from "./Modals/ShiftRequestModal";
+import AdminConfirmModal from "./Modals/AdminConfirmModal"; // <-- Import the modal here
 import { generateSchedule } from "./generateSchedule";
 
 const workers = ["Alice", "Bob", "Charlie", "Diana", "Eve"];
@@ -40,16 +41,21 @@ function generateWeekDates(startMonday: Date) {
 }
 
 function MonthlyBubble() {
-  // === State ===
   const [preferences, setPreferences] = useState<{ [name: string]: string }>({});
   const [schedule, setSchedule] = useState<{ [weekIndex: number]: any }>({});
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [requestModalData, setRequestModalData] = useState<any | null>(null);
+  const [adminConfirmData, setAdminConfirmData] = useState<{
+    worker: string;
+    date: string;
+    dayIndex: number;
+    currentShift: string;
+    newShift: string;
+  } | null>(null);
   const [weekMondays, setWeekMondays] = useState<Date[]>([]);
 
-  // Set current date Mondays for 4 weeks
   useEffect(() => {
     const currentMonday = getMonday(new Date());
     const mondays: Date[] = [];
@@ -64,30 +70,49 @@ function MonthlyBubble() {
   const currentWeekDates =
     weekMondays.length === 4 ? generateWeekDates(weekMondays[selectedWeekIndex]) : [];
 
-  // === Permissions ===
-  const isAdmin = true; // Toggle to false to test user mode
+  const isAdmin = false; // Simulating admin for now
 
-  // === Handlers ===
-  const handleEdit = (worker: string, dayIndex: number) => {
-    if (isAdmin) {
-      setEditingDay(`${selectedWeekIndex}-${worker}-${dayIndex}`);
-    } else {
-      // Open request modal for user requests
-      const date = currentWeekDates[dayIndex];
-      const currentShift = schedule[selectedWeekIndex]?.[worker]?.[dayIndex] || "Off";
-      setRequestModalData({ worker, date, currentShift, weekIndex: selectedWeekIndex });
-    }
+  const handleRequestShift = (worker: string, date: string, currentShift: string) => {
+    setRequestModalData({ worker, date, currentShift, weekIndex: selectedWeekIndex });
   };
 
   const handleShiftChange = (worker: string, dayIndex: number, shift: string) => {
+    if (isAdmin) {
+      setAdminConfirmData({
+        worker,
+        date: currentWeekDates[dayIndex],
+        dayIndex,
+        currentShift: schedule[selectedWeekIndex]?.[worker]?.[dayIndex] || "Off",
+        newShift: shift,
+      });
+    } else {
+      setSchedule((prev) => {
+        const weekSchedule = { ...(prev[selectedWeekIndex] || {}) };
+        const workerShifts = [...(weekSchedule[worker] || Array(7).fill("Off"))];
+        workerShifts[dayIndex] = shift;
+        weekSchedule[worker] = workerShifts;
+        return { ...prev, [selectedWeekIndex]: weekSchedule };
+      });
+      setEditingDay(null);
+    }
+  };
+
+  const confirmAdminShiftChange = () => {
+    if (!adminConfirmData) return;
+    const { worker, dayIndex, newShift } = adminConfirmData;
     setSchedule((prev) => {
       const weekSchedule = { ...(prev[selectedWeekIndex] || {}) };
       const workerShifts = [...(weekSchedule[worker] || Array(7).fill("Off"))];
-      workerShifts[dayIndex] = shift;
+      workerShifts[dayIndex] = newShift;
       weekSchedule[worker] = workerShifts;
       return { ...prev, [selectedWeekIndex]: weekSchedule };
     });
+    setAdminConfirmData(null);
     setEditingDay(null);
+  };
+
+  const cancelAdminShiftChange = () => {
+    setAdminConfirmData(null);
   };
 
   const handleRequestSubmit = (request: any) => {
@@ -140,32 +165,26 @@ function MonthlyBubble() {
         />
       ) : (
         <>
-         <ScheduleTable
-          schedule={schedule[selectedWeekIndex]}
-          workers={workers}
-          editingDay={editingDay}
-          onEdit={handleEdit}
-          onShiftChange={handleShiftChange}
-          dayLabels={currentWeekDates} // "dd/mm" format
-          dayDates={weekMondays.length === 4 ? generateWeekISODates(weekMondays[selectedWeekIndex]) : []}
-          selectedWeekIndex={selectedWeekIndex}
-          isAdmin={isAdmin}
-        />
-          <ActionButtons onRegenerate={regenerate} onSave={saveSchedule} />
+          <ScheduleTable
+            schedule={schedule[selectedWeekIndex]}
+            workers={workers}
+            editingDay={editingDay}
+            onEdit={(worker, dayIndex) =>
+              isAdmin
+                ? setEditingDay(`${selectedWeekIndex}-${worker}-${dayIndex}`)
+                : handleRequestShift(worker, currentWeekDates[dayIndex], schedule[selectedWeekIndex]?.[worker]?.[dayIndex] || "Off")
+            }
+            onShiftChange={handleShiftChange}
+            dayLabels={currentWeekDates}
+            dayDates={
+              weekMondays.length === 4 ? generateWeekISODates(weekMondays[selectedWeekIndex]) : []
+            }
+            selectedWeekIndex={selectedWeekIndex}
+            isAdmin={isAdmin}
+            onRequestShift={handleRequestShift}
+          />
 
-          {requests.length > 0 && (
-            <div className="mt-4 p-3 bg-white/10 rounded-lg">
-              <h3 className="font-semibold mb-2">📥 Requests</h3>
-              <ul className="text-sm">
-                {requests.map((req, i) => (
-                  <li key={i}>
-                    {req.worker} requested <strong>{req.desiredShift}</strong> on {req.date} (Reason:{" "}
-                    {req.reason})
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <ActionButtons onRegenerate={regenerate} onSave={saveSchedule} />
         </>
       )}
 
@@ -174,6 +193,16 @@ function MonthlyBubble() {
           {...requestModalData}
           onClose={() => setRequestModalData(null)}
           onSubmit={handleRequestSubmit}
+        />
+      )}
+
+      {adminConfirmData && (
+        <AdminConfirmModal
+          worker={adminConfirmData.worker}
+          date={adminConfirmData.date}
+          newShift={adminConfirmData.newShift}
+          onConfirm={confirmAdminShiftChange}
+          onCancel={cancelAdminShiftChange}
         />
       )}
     </div>
