@@ -1,194 +1,197 @@
-import { useState } from "react";
-import clsx from "clsx";
+import { useEffect, useState } from "react";
+import ScheduleTable from "./Calendar/ScheduleTable";
+import ShiftRequestModal from "./Calendar/ShiftRequestModal";
+import AdminConfirmModal from "./Calendar/AdminConfirmModal";
+import RequestsList from "../RequestsList";
 
-const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
 const workers = ["Alice", "Bob", "Charlie", "Diana", "Eve"];
-const shifts = ["Morning", "Afternoon"];
 
-function formatDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+function getMonday(date: Date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
 }
 
-function generateWeek(startDate: Date) {
-  const week: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + i);
-    week.push(formatDate(date));
-  }
-  return week;
+function formatDate(date: Date) {
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function generateWeekDates(startMonday: Date) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(startMonday);
+    d.setDate(d.getDate() + i);
+    return formatDate(d);
+  });
+}
+
+function generateWeekISOdates(startMonday: Date) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(startMonday);
+    d.setDate(d.getDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
+}
+
+interface ShiftRequest {
+  worker: string;
+  date: string;
+  currentShift: string;
+  desiredShift: string;
+  reason: string;
 }
 
 function WeekBubble() {
-  const [preferences, setPreferences] = useState<{ [name: string]: string }>({});
-  const [schedule, setSchedule] = useState<any>(null);
+  const [schedule, setSchedule] = useState<{ [worker: string]: string[] }>({});
   const [editingDay, setEditingDay] = useState<string | null>(null);
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [requests, setRequests] = useState<ShiftRequest[]>([]);
+  const [requestModalData, setRequestModalData] = useState<
+    Omit<ShiftRequest, "desiredShift" | "reason"> | null
+  >(null);
+  const [pendingChange, setPendingChange] = useState<{
+    worker: string;
+    dayIndex: number;
+    newShift: string;
+  } | null>(null);
 
-  const weekDates = generateWeek(currentWeek);
 
-  const handlePreference = (name: string, shift: string) => {
-    setPreferences((prev) => ({ ...prev, [name]: shift }));
-  };
 
-  const generateSchedule = () => {
-    const result: any = {};
-    const nightWorker = workers[4];
-    const daysOff = [...days];
-    const nightDaysOff: string[] = [];
+  const isAdmin = true; // toggle to true for admin testing
+  const selectedWeekIndex = 0;
 
-    // Assign 2 random days off for the night shift worker
-    while (nightDaysOff.length < 2) {
-      const day = days[Math.floor(Math.random() * days.length)];
-      if (!nightDaysOff.includes(day)) nightDaysOff.push(day);
-    }
+  const monday = getMonday(new Date());
+  const weekDates = generateWeekDates(monday);
+  const weekISOdates = generateWeekISOdates(monday);
 
-    result[nightWorker] = days.map((day) =>
-      nightDaysOff.includes(day) ? "Off" : "Night"
-    );
+useEffect(() => {
+  // Simulate backend fetch delay
+  setTimeout(() => {
+    const fetchedSchedule = {
+      Alice: ["Morning", "Morning", "Off", "Afternoon", "Night", "Off", "Off"],
+      Bob: ["Off", "Afternoon", "Afternoon", "Off", "Off", "Morning", "Morning"],
+      Charlie: ["Morning", "Off", "Morning", "Morning", "Off", "Afternoon", "Off"],
+      Diana: ["Afternoon", "Off", "Off", "Afternoon", "Afternoon", "Off", "Off"],
+      Eve: ["Night", "Night", "Night", "Night", "Night", "Off", "Off"],
+    };
 
-    for (let i = 0; i < 4; i++) {
-      const name = workers[i];
-      const preferred = preferences[name];
-      const freeDay = days[Math.floor(Math.random() * days.length)];
+    const fetchedRequests = [
+      {
+        worker: "Bob",
+        date: "02.07",
+        currentShift: "Afternoon",
+        desiredShift: "Morning",
+        reason: "Family event",
+      },
+    ];
 
-      result[name] = days.map((day) => {
-        if (day === freeDay) return "Off";
-        return preferred || shifts[Math.floor(Math.random() * shifts.length)];
-      });
-    }
-
-    setSchedule(result);
-  };
+    setSchedule(fetchedSchedule);
+    setRequests(fetchedRequests);
+  }, 1000);
+}, []);
 
   const handleEdit = (worker: string, dayIndex: number) => {
-    setEditingDay(`${worker}-${dayIndex}`);
+    const key = `${selectedWeekIndex}-${worker}-${dayIndex}`;
+    setEditingDay(key);
   };
 
   const handleShiftChange = (worker: string, dayIndex: number, shift: string) => {
-    setSchedule((prev: any) => {
-      const updated = { ...prev };
-      updated[worker][dayIndex] = shift;
-      return updated;
+  if (isAdmin) {
+    setPendingChange({ worker, dayIndex, newShift: shift });
+  } else {
+    setSchedule((prev) => {
+      const newSchedule = { ...prev };
+      const shifts = [...(newSchedule[worker] || Array(7).fill("Off"))];
+      shifts[dayIndex] = shift;
+      newSchedule[worker] = shifts;
+      return newSchedule;
     });
     setEditingDay(null);
+  }
+};
+
+
+  const handleRequestSubmit = (request: ShiftRequest) => {
+    setRequests((prev) => [...prev, request]);
+    setRequestModalData(null);
   };
 
-  const goToNextWeek = () => {
-    const next = new Date(currentWeek);
-    next.setDate(currentWeek.getDate() + 7);
-    setCurrentWeek(next);
-    setSchedule(null);
-    setPreferences({});
-  };
+  const confirmAdminEdit = () => {
+  if (!pendingChange) return;
+  const { worker, dayIndex, newShift } = pendingChange;
+
+  setSchedule((prev) => {
+    const newSchedule = { ...prev };
+    const shifts = [...(newSchedule[worker] || Array(7).fill("Off"))];
+    shifts[dayIndex] = newShift;
+    newSchedule[worker] = shifts;
+    return newSchedule;
+  });
+
+  setEditingDay(null);
+  setPendingChange(null);
+};
+
+
 
   return (
-    <div className="text-white">
-      <h2 className="text-2xl mb-4">📅 Weekly Schedule</h2>
-      <p className="mb-2">Select preferred shifts for each worker (except the night shift person):</p>
-      {workers.slice(0, 4).map((name) => (
-        <div key={name} className="mb-2">
-          <label className="mr-4">{name}:</label>
-          <select
-            className="bg-white/10 p-2 rounded"
-            value={preferences[name] || ""}
-            onChange={(e) => handlePreference(name, e.target.value)}
-          >
-            <option value="">Select</option>
-            {shifts.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-      ))}
+    <div className="text-white p-4">
+      <h2 className="text-xl mb-4">📆 This Week's Schedule</h2>
 
-      {!schedule && (
-        <button
-          className="mt-4 bg-white/20 px-4 py-2 rounded hover:bg-white/30"
-          onClick={generateSchedule}
-        >
-          Generate Schedule
-        </button>
-      )}
-
-      {schedule && (
+      {Object.keys(schedule).length > 0 ? (
         <>
-          <div className="overflow-x-auto mt-6">
-            <table className="w-full border border-white/20">
-              <thead>
-                <tr>
-                  <th className="p-2 border border-white/20">Worker</th>
-                  {weekDates.map((date) => (
-                    <th key={date} className="p-2 border border-white/20">
-                      {date.slice(5)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {workers.map((worker) => (
-                  <tr key={worker}>
-                    <td className="p-2 border border-white/20 font-semibold">{worker}</td>
-                    {schedule[worker].map((shift: string, idx: number) => {
-                      const key = `${worker}-${idx}`;
-                      return (
-                        <td
-                          key={key}
-                          className={clsx(
-                            "p-2 border border-white/20 cursor-pointer hover:bg-white/10",
-                            shift === "Off" && "text-gray-400 italic",
-                            shift === "Night" && "text-purple-400",
-                            shift === "Morning" && "text-green-300",
-                            shift === "Afternoon" && "text-yellow-300"
-                          )}
-                          onClick={() => handleEdit(worker, idx)}
-                        >
-                          {editingDay === key ? (
-                            <select
-                              autoFocus
-                              className="bg-white/10 p-1 rounded"
-                              value={shift}
-                              onChange={(e) => handleShiftChange(worker, idx, e.target.value)}
-                            >
-                              <option>Morning</option>
-                              <option>Afternoon</option>
-                              <option>Night</option>
-                              <option>Off</option>
-                            </select>
-                          ) : (
-                            shift
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ScheduleTable
+            schedule={schedule}
+            workers={workers}
+            editingDay={editingDay}
+            onEdit={handleEdit}
+            onShiftChange={handleShiftChange}
+            dayLabels={weekDates}
+            dayDates={weekISOdates}
+            selectedWeekIndex={selectedWeekIndex}
+            isAdmin={isAdmin}
+            onRequestShift={(worker, date, currentShift) => {
+              setRequestModalData({ worker, date, currentShift });
+            }}
+          />
 
-          <div className="mt-6 flex gap-4">
-            <button
-              onClick={goToNextWeek}
-              className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600"
-            >
-              ➕ Next Week
-            </button>
-            <button
-              onClick={generateSchedule}
-              className="bg-yellow-500 px-4 py-2 rounded hover:bg-yellow-600"
-            >
-              🔄 Regenerate
-            </button>
-            <button
-              className="bg-green-500 px-4 py-2 rounded hover:bg-green-600"
-              // Placeholder for future save logic
-            >
-              ✅ Save
-            </button>
-          </div>
+          {isAdmin && requests.length > 0 && (
+            <RequestsList
+              requests={requests}
+              onApprove={(request) => {
+                handleShiftChange(request.worker, weekISOdates.indexOf(request.date), request.desiredShift);
+                setRequests((prev) => prev.filter((r) => r !== request));
+              }}
+              onReject={(request) => {
+                setRequests((prev) => prev.filter((r) => r !== request));
+              }}
+            />
+          )}
         </>
+      ) : (
+        <p>Loading schedule...</p>
       )}
+
+      {requestModalData && (
+        <ShiftRequestModal
+          {...requestModalData}
+          onClose={() => setRequestModalData(null)}
+          onSubmit={handleRequestSubmit}
+        />
+      )}
+      {pendingChange && (
+        <AdminConfirmModal
+          worker={pendingChange.worker}
+          date={weekDates[pendingChange.dayIndex]}
+          newShift={pendingChange.newShift}
+          onConfirm={confirmAdminEdit}
+          onCancel={() => setPendingChange(null)}
+        />
+      )}
+
     </div>
   );
 }
