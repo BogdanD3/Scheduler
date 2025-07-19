@@ -6,6 +6,7 @@ export default function Login() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -14,7 +15,7 @@ export default function Login() {
     setError('');
     setSuccess('');
     try {
-      await login(email, password);
+      await login(email, password, stayLoggedIn);
       setSuccess('Login successful!');
     } catch (err: any) {
       setError(err.message);
@@ -41,6 +42,14 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={stayLoggedIn}
+            onChange={(e) => setStayLoggedIn(e.target.checked)}
+          />
+          Stay logged in
+        </label>
         <button
           className="bg-green-600 text-white rounded p-2 hover:bg-green-700"
           type="submit"

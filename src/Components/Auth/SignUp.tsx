@@ -9,6 +9,8 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [stayLoggedIn, setStayLoggedIn] = useState(false);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +18,7 @@ export default function Signup() {
     setSuccess('');
     try {
       // Pass 'user' as the default role
-      await signup(email, password, name, 'user');
+      await signup(email, password, name, 'user', stayLoggedIn);
       setSuccess('Signup successful!');
       setEmail('');
       setName('');
@@ -54,6 +56,14 @@ export default function Signup() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={stayLoggedIn}
+          onChange={(e) => setStayLoggedIn(e.target.checked)}
+        />
+        Stay logged in
+      </label>
         <button
           className="bg-blue-600 text-white rounded p-2 hover:bg-blue-700"
           type="submit"
