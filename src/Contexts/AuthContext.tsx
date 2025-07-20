@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await setPersistence(auth, stayLoggedIn ? browserLocalPersistence : browserSessionPersistence);
       const res = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, 'users', res.user.uid), { name, role })
+      await setDoc(doc(db, 'users', res.user.uid), { name, role, email: res.user.email || ''})
   .then(() => console.log("User added to Firestore"))
   .catch(console.error);
 
