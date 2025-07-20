@@ -3,6 +3,7 @@ import ScheduleTable from "./Calendar/ScheduleTable";
 import ShiftRequestModal from "./Calendar/Modals/ShiftRequestModal";
 import AdminConfirmModal from "./Calendar/Modals/AdminConfirmModal";
 import RequestsList from "../RequestsList";
+import { useAuth } from "../../Contexts/AuthContext";
 
 
 const workers = ["Alice", "Bob", "Charlie", "Diana", "Eve"];
@@ -60,7 +61,9 @@ function WeekBubble() {
 
 
 
-  const isAdmin = true; // toggle to true for admin testing
+const { userData } = useAuth();
+const isAdmin = userData?.role === 'admin';
+
   const selectedWeekIndex = 0;
 
   const monday = getMonday(new Date());

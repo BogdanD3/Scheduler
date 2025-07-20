@@ -27,6 +27,8 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string, role: Role, stayLoggedIn: boolean) => Promise<void>;
   login: (email: string, password: string, stayLoggedIn: boolean) => Promise<void>;
   logout: () => Promise<void>;
+  currentUser: AppUser | null;
+  userData: { name: string; role: 'admin' | 'user' } | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -34,7 +36,7 @@ export const useAuth = () => useContext(AuthContext)!;
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState(true); // 🧠 Add loading flag
+  const [loading, setLoading] = useState(true); 
 
   const loadUserData = async (fbUser: FirebaseUser) => {
     try {
@@ -66,7 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         setUser(null);
       }
-      setLoading(false); // ✅ Set loading to false after auth check
+      setLoading(false); 
     });
 
     return () => unsubscribe();
@@ -108,8 +110,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return <LoadingOverlay />;
   }
 
+  const userData = user ? { name: user.name, role: user.role } : null;
+
   return (
-    <AuthContext.Provider value={{ user, signup, login, logout }}>
+    <AuthContext.Provider value={{ user, signup, login, logout, userData, currentUser: user }}>
       {children}
     </AuthContext.Provider>
   );

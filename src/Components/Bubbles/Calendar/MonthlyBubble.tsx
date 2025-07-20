@@ -4,8 +4,10 @@ import ShiftPreferencesForm from "./ShiftPreferencesForm";
 import ScheduleTable from "./ScheduleTable";
 import ActionButtons from "./ActionButtons";
 import ShiftRequestModal from "./Modals/ShiftRequestModal";
-import AdminConfirmModal from "./Modals/AdminConfirmModal"; // <-- Import the modal here
+import AdminConfirmModal from "./Modals/AdminConfirmModal";   
 import { generateSchedule } from "./generateSchedule";
+import { useAuth } from "../../../Contexts/AuthContext";
+
 
 const workers = ["Alice", "Bob", "Charlie", "Diana", "Eve"];
 const weeks = ["Week 1", "Week 2", "Week 3", "Week 4"];
@@ -70,7 +72,15 @@ function MonthlyBubble() {
   const currentWeekDates =
     weekMondays.length === 4 ? generateWeekDates(weekMondays[selectedWeekIndex]) : [];
 
-  const isAdmin = false; // Simulating admin for now
+  const { currentUser, userData } = useAuth();
+
+  if (!userData) {
+    return <div className="text-white p-4">Loading user data...</div>;
+  }
+
+  const isAdmin = userData.role === 'admin';
+
+
 
   const handleRequestShift = (worker: string, date: string, currentShift: string) => {
     setRequestModalData({ worker, date, currentShift, weekIndex: selectedWeekIndex });
