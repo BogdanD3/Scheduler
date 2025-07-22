@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../Contexts/AuthContext";
+import { SettingsMenu } from '../Components/SettingsMenu'; 
 
 // Import bubble components
 import WeekBubble from "../Components/Bubbles/WeekBubble";
@@ -19,26 +20,12 @@ const moduleComponents = {
 
 function Home() {
   const [activeModule, setActiveModule] = useState<string | null>(null);
-  const { logout } = useAuth();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      window.location.href = "/login"; // Redirect to login after logout
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
 
   return (
     <>
       {/* Logout Button */}
-      <button
-        onClick={handleLogout}
-        className="fixed top-6 right-6 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-lg transition-all"
-      >
-        Logout
-      </button>
+
+    <SettingsMenu />
 
       {/* Animated Modal */}
       <AnimatePresence>
