@@ -20,19 +20,23 @@ export function generateSchedule({
   const eve = "Eve";
   const otherWorkers = workers.filter((w) => w !== eve);
 
+  // Pick Eve's two off days randomly
   const eveOffStart = Math.floor(Math.random() * 6);
   const eveOffDays = [eveOffStart, (eveOffStart + 1) % 7];
 
+  // Eve's schedule: Night except her off days
   result[eve] = Array(7)
     .fill("Night")
     .map((_, i) => (eveOffDays.includes(i) ? "Off" : "Night"));
 
+  // Initialize shift counts per day
   const shiftCountsPerDay: Record<number, Record<string, number>> = {};
   for (let i = 0; i < 7; i++) {
     shiftCountsPerDay[i] = { Morning: 0, Afternoon: 0, Night: 0 };
     if (!eveOffDays.includes(i)) shiftCountsPerDay[i]["Night"]++;
   }
 
+  // Pick fill-in night worker from preferred Night workers or randomly
   const preferredNightWorkers = otherWorkers.filter(
     (w) => preferences[w] === "Night"
   );
@@ -42,39 +46,48 @@ export function generateSchedule({
       : otherWorkers[Math.floor(Math.random() * otherWorkers.length)];
 
   const dayWorkers = otherWorkers.filter((w) => w !== nightFillIn);
+
+  // Initialize fill-in schedule
   result[nightFillIn] = Array(7).fill(null);
 
+  // Assign fill-in night shifts ONLY on Eve's off days
   for (const day of eveOffDays) {
     result[nightFillIn][day] = "Night";
     shiftCountsPerDay[day]["Night"]++;
   }
 
+  // Assign two free days immediately after Eve's off days for fill-in
   const fillInOffDay1 = (eveOffDays[1] + 1) % 7;
   const fillInOffDay2 = (fillInOffDay1 + 1) % 7;
 
   result[nightFillIn][fillInOffDay1] = "Off";
   result[nightFillIn][fillInOffDay2] = "Off";
 
+  // Make sure shiftCounts are initialized for off days
   shiftCountsPerDay[fillInOffDay1] ??= { Morning: 0, Afternoon: 0, Night: 0 };
   shiftCountsPerDay[fillInOffDay2] ??= { Morning: 0, Afternoon: 0, Night: 0 };
 
+  // For the rest of fill-in's days, assign Afternoon/Morning/Off only (no Night)
   for (let i = 0; i < 7; i++) {
-    if (result[nightFillIn][i]) continue;
+    if (result[nightFillIn][i]) continue; // already assigned night or off
 
     let shift = "Off";
-    if (shiftCountsPerDay[i]["Morning"] < 2) {
-      shift = "Morning";
-    } else if (shiftCountsPerDay[i]["Afternoon"] < 2) {
+
+    if (shiftCountsPerDay[i]["Afternoon"] < 2) {
       shift = "Afternoon";
+    } else if (shiftCountsPerDay[i]["Morning"] < 2) {
+      shift = "Morning";
     }
 
     result[nightFillIn][i] = shift;
     if (shift !== "Off") shiftCountsPerDay[i][shift]++;
   }
 
+  // Assign schedule for other workers - NO NIGHT SHIFTS allowed here
   for (const worker of dayWorkers) {
     result[worker] = Array(7).fill(null);
 
+    // Find a free day for this worker (only one off day per day)
     let freeDay = -1;
     for (let tries = 0; tries < 20; tries++) {
       const d = Math.floor(Math.random() * 7);
@@ -99,7 +112,12 @@ export function generateSchedule({
       }
     }
 
-    const preferred = preferences?.[worker] ?? ["Morning", "Afternoon", "Night"][Math.floor(Math.random() * 3)];
+    // Allowed shifts for other workers (no night shifts)
+    const allowedShifts = ["Afternoon", "Morning", "Off"];
+
+    // Use preferred shift only if it is Afternoon or Morning
+    const preferred = preferences?.[worker];
+    const preferredShift = allowedShifts.includes(preferred) ? preferred : null;
 
     for (let i = 0; i < 7; i++) {
       if (i === freeDay) {
@@ -108,12 +126,13 @@ export function generateSchedule({
       }
 
       let shift = "Off";
-      if (preferred && shiftCountsPerDay[i][preferred] < 2) {
-        shift = preferred;
-      } else if (shiftCountsPerDay[i]["Morning"] < 2) {
-        shift = "Morning";
+
+      if (preferredShift && shiftCountsPerDay[i][preferredShift] < 2) {
+        shift = preferredShift;
       } else if (shiftCountsPerDay[i]["Afternoon"] < 2) {
         shift = "Afternoon";
+      } else if (shiftCountsPerDay[i]["Morning"] < 2) {
+        shift = "Morning";
       }
 
       result[worker][i] = shift;

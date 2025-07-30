@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../Contexts/AuthContext';
+import { redirect } from 'react-router-dom';
 
 export default function Login() {
   const { login } = useAuth();
@@ -50,6 +51,7 @@ export default function Login() {
           />
           Stay logged in
         </label>
+        <a href='/signup'>Don't have an account?</a>
         <button
           className="bg-green-600 text-white rounded p-2 hover:bg-green-700"
           type="submit"

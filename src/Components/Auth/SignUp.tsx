@@ -64,6 +64,7 @@ export default function Signup() {
         />
         Stay logged in
       </label>
+      <a href='/login'>Already have an account?</a>
         <button
           className="bg-blue-600 text-white rounded p-2 hover:bg-blue-700"
           type="submit"
